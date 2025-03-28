@@ -61,7 +61,7 @@ def compare_handwritings(folder_path, my_handwriting_paths):
     return df
 
 # 設定資料夾
-folder_path = 'D:/compare_lpips_ssim-main/4E82'
+folder_path = 'D:/compare_lpips_ssim-main/4E82' //將4E82改名成全部人「陳」字的資料夾名稱，不要用中文
 my_handwriting_folder = 'D:/compare_lpips_ssim-main/yours'
 
 # 確保 `yours` 資料夾內有圖片
