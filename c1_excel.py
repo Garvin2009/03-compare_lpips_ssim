@@ -5,38 +5,47 @@ import os
 import pandas as pd
 from skimage.metrics import structural_similarity as ssim
 import numpy as np
-import matplotlib.pyplot as plt
+import torchvision.transforms as transforms
 
-def compute_ssim(image1_path, image2_path):
-    """ 計算 SSIM (結構相似性) 指標 """
-    image1 = np.array(Image.open(image1_path).convert('RGB'))
-    image2 = np.array(Image.open(image2_path).convert('RGB'))
+# 初始化 LPIPS 模型（只執行一次）
+lpips_model = lpips.LPIPS(net='alex')
 
-    # 確保兩個圖像具有相同的尺寸
-    assert image1.shape == image2.shape, "Images must have the same dimensions for SSIM."
+def load_and_preprocess_image(image_path, target_size=(224, 224)):
+    """ 加載並調整圖片尺寸，確保 LPIPS 比對時圖片尺寸一致 """
+    image = Image.open(image_path).convert("RGB")  # 確保是 RGB 圖片
+    transform = transforms.Compose([
+        transforms.Resize(target_size),  # 重新調整大小
+        transforms.ToTensor()
+    ])
+    return transform(image).unsqueeze(0)  # 增加 batch 維度
+
+def compute_lpips_distance(image1_path, image2_path):
+    """ 計算 LPIPS (感知相似度) 距離，確保輸入尺寸一致 """
+    image1_tensor = load_and_preprocess_image(image1_path)
+    image2_tensor = load_and_preprocess_image(image2_path)
+
+    with torch.no_grad():
+        distance = lpips_model.forward(image1_tensor, image2_tensor)
+
+    return distance.item()
+
+def compute_ssim(image1_path, image2_path, target_size=(224, 224)):
+    """ 計算 SSIM，相同尺寸才可比較 """
+    image1 = Image.open(image1_path).convert("RGB").resize(target_size)
+    image2 = Image.open(image2_path).convert("RGB").resize(target_size)
+
+    image1 = np.array(image1)
+    image2 = np.array(image2)
 
     # 設定合適的 win_size
-    min_dim = min(image1.shape[:2])  # 取得最小邊長
-    win_size = min(7, min_dim) if min_dim >= 7 else 3  # 確保 win_size 不超過圖片大小
+    min_dim = min(image1.shape[:2])
+    win_size = min(7, min_dim) if min_dim >= 7 else 3
 
     print(f"Using win_size={win_size} for SSIM calculation.")
 
     # 計算 SSIM
     ssim_value = ssim(image1, image2, channel_axis=-1, win_size=win_size)
     return ssim_value
-
-def compute_lpips_distance(image1_path, image2_path, net='alex'):
-    """ 計算 LPIPS (感知相似度) 距離 """
-    lpips_model = lpips.LPIPS(net=net)
-
-    image1_tensor = lpips.im2tensor(lpips.load_image(image1_path))
-    image2_tensor = lpips.im2tensor(lpips.load_image(image2_path))
-
-    # 計算 LPIPS 距離
-    with torch.no_grad():
-        distance = lpips_model.forward(image1_tensor, image2_tensor)
-
-    return distance.item()
 
 def compare_handwritings(folder_path, my_handwriting_paths):
     """ 比較手寫字圖片相似度，回傳 DataFrame """
@@ -52,16 +61,16 @@ def compare_handwritings(folder_path, my_handwriting_paths):
         for image_path in images_to_compare:
             lpips_distance = compute_lpips_distance(my_handwriting_path, image_path)
             ssim_value = compute_ssim(my_handwriting_path, image_path)
-            results.append((os.path.basename(my_handwriting_path), os.path.basename(image_path), lpips_distance, ssim_value))
+            results.append((os.path.basename(image_path), lpips_distance, ssim_value))
 
     # 建立 DataFrame
-    df = pd.DataFrame(results, columns=['Your_Image', 'Other_image', 'LPIPS', 'SSIM'])
+    df = pd.DataFrame(results, columns=['Student', 'LPIPS', 'SSIM'])
     df.sort_values(by='LPIPS', inplace=True)
 
     return df
 
 # 設定資料夾
-folder_path = 'D:/compare_lpips_ssim-main/4E82' //將4E82改名成全部人「陳」字的資料夾名稱，不要用中文
+folder_path = 'D:/compare_lpips_ssim-main/word'
 my_handwriting_folder = 'D:/compare_lpips_ssim-main/yours'
 
 # 確保 `yours` 資料夾內有圖片
