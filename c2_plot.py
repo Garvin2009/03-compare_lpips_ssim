@@ -17,7 +17,7 @@ for csv_file in csv_files:
     df = pd.read_csv(csv_path)
 
     # 確保必要欄位存在
-    required_columns = {'Other_image', 'LPIPS', 'SSIM'}
+    required_columns = {'Student', 'LPIPS', 'SSIM'}
     if not required_columns.issubset(df.columns):
         print(f"⚠️ 警告：{csv_file} 缺少必要欄位，跳過此檔案。")
         continue  
@@ -39,12 +39,12 @@ for csv_file in csv_files:
     plt.title(f'Scatter - SSIM vs LPIPS ({csv_file})', fontsize=14)
 
     # 繪製散點圖
-    scatter = sns.scatterplot(data=df_filtered, x='SSIM', y='LPIPS', hue='Other_image', palette='tab10', legend=False)
+    scatter = sns.scatterplot(data=df_filtered, x='SSIM', y='LPIPS', hue='Student', palette='tab10', legend=False)
 
     # 加入標籤（偏移一點，避免重疊）
     for index, row in df_filtered.iterrows():
         plt.text(row['SSIM'] + 0.002, row['LPIPS'], 
-                 row['Other_image'], horizontalalignment='left', 
+                 row['Student'], horizontalalignment='left', 
                  fontsize=9, color='black', weight='semibold')
 
     # 設定 X 軸與 Y 軸範圍（根據數據動態調整）
